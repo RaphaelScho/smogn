@@ -228,72 +228,54 @@ def smoter(
     ## conduct over / under sampling and store modified training set
     data_new = pd.DataFrame()
 
-    print("start sampling")
+    for i in range(n_bumps):
 
-    if parallel:
-        print("parallel")
-        print(n_bumps)
-        with Pool(cpu_count()) as pool:
-            results = pool.map(partial(sampling,
-                                       s_perc=s_perc,
-                                       data=data,
-                                       b_index=b_index,
-                                       pert=pert,
-                                       k=k,
-                                       under_samp=under_samp,
-                                       replace=replace),
-                               list(range(n_bumps)))
-            data_new = pd.concat(results)
+        ## no sampling
+        if s_perc[i] == 1:
 
-    if not parallel:
-        print("not parallel")
-        for i in range(n_bumps):
+            ## simply return no sampling
+            ## results to modified training set
+            data_new = pd.concat([data.iloc[b_index[i].index], data_new])
 
-            ## no sampling
-            if s_perc[i] == 1:
+        ## over-sampling
+        if s_perc[i] > 1:
 
-                ## simply return no sampling
-                ## results to modified training set
-                data_new = pd.concat([data.iloc[b_index[i].index], data_new])
+            ## generate synthetic observations in training set
+            ## considered 'minority'
+            ## (see 'over_sampling()' function for details)
+            synth_obs = over_sampling(
+                data = data,
+                index = list(b_index[i].index),
+                perc = s_perc[i],
+                pert = pert,
+                k = k,
+                parallel=parallel
+            )
 
-            ## over-sampling
-            if s_perc[i] > 1:
+            ## concatenate over-sampling
+            ## results to modified training set
+            data_new = pd.concat([synth_obs, data_new])
 
-                ## generate synthetic observations in training set
-                ## considered 'minority'
-                ## (see 'over_sampling()' function for details)
-                synth_obs = over_sampling(
-                    data = data,
-                    index = list(b_index[i].index),
-                    perc = s_perc[i],
-                    pert = pert,
-                    k = k
+        ## under-sampling
+        if under_samp is True:
+            if s_perc[i] < 1:
+
+                ## drop observations in training set
+                ## considered 'normal' (not 'rare')
+                omit_index = np.random.choice(
+                    a = list(b_index[i].index),
+                    size = int(s_perc[i] * len(b_index[i])),
+                    replace = replace
                 )
 
-                ## concatenate over-sampling
+                omit_obs = data.drop(
+                    index = omit_index,
+                    axis = 0
+                )
+
+                ## concatenate under-sampling
                 ## results to modified training set
-                data_new = pd.concat([synth_obs, data_new])
-
-            ## under-sampling
-            if under_samp is True:
-                if s_perc[i] < 1:
-
-                    ## drop observations in training set
-                    ## considered 'normal' (not 'rare')
-                    omit_index = np.random.choice(
-                        a = list(b_index[i].index),
-                        size = int(s_perc[i] * len(b_index[i])),
-                        replace = replace
-                    )
-
-                    omit_obs = data.drop(
-                        index = omit_index,
-                        axis = 0
-                    )
-
-                    ## concatenate under-sampling
-                    ## results to modified training set
-                    data_new = pd.concat([omit_obs, data_new])
+                data_new = pd.concat([omit_obs, data_new])
 
     print("post-proc")
 
@@ -313,48 +295,3 @@ def smoter(
     ## return modified training set
     return data_new
 
-
-def sampling(i, s_perc, data, b_index, pert, k, under_samp, replace):
-    print(i)
-    # no sampling
-    if s_perc[i] == 1:
-        # simply return no sampling
-        # results to modified training set
-        return [data.iloc[b_index[i].index]]
-
-    # over-sampling
-    if s_perc[i] > 1:
-        # generate synthetic observations in training set
-        # considered 'minority'
-        # (see 'over_sampling()' function for details)
-        synth_obs = over_sampling(
-            data=data,
-            index=list(b_index[i].index),
-            perc=s_perc[i],
-            pert=pert,
-            k=k
-        )
-
-        # concatenate over-sampling
-        # results to modified training set
-        return synth_obs
-
-    # under-sampling
-    if under_samp is True:
-        if s_perc[i] < 1:
-            # drop observations in training set
-            # considered 'normal' (not 'rare')
-            omit_index = np.random.choice(
-                a=list(b_index[i].index),
-                size=int(s_perc[i] * len(b_index[i])),
-                replace=replace
-            )
-
-            omit_obs = data.drop(
-                index=omit_index,
-                axis=0
-            )
-
-            # concatenate under-sampling
-            # results to modified training set
-            return omit_obs
