@@ -24,6 +24,7 @@ def smoter(
     drop_na_row = True,       ## auto drop rows with nan's (bool)
     replace = False,          ## sampling replacement (bool)
     parallel=False,           # parallel processing
+    silent=False,             # show progress outputs
     
     ## phi relevance function arguments / inputs
     rel_thres = 0.5,          ## relevance threshold considered rare (pos real)
@@ -88,7 +89,7 @@ def smoter(
     http://proceedings.mlr.press/v74/branco17a/branco17a.pdf.
     """
 
-    print("start smogn")
+    if not silent: print("start smogn")
 
     ## pre-process missing values
     if bool(drop_na_col) == True:
@@ -249,7 +250,8 @@ def smoter(
                 perc = s_perc[i],
                 pert = pert,
                 k = k,
-                parallel=parallel
+                parallel=parallel,
+                silent=silent
             )
 
             ## concatenate over-sampling
@@ -277,7 +279,7 @@ def smoter(
                 ## results to modified training set
                 data_new = pd.concat([omit_obs, data_new])
 
-    print("post-proc")
+    if not silent: print("post-proc")
 
     ## rename feature headers to originals
     data_new.columns = feat_names
