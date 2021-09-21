@@ -444,6 +444,7 @@ def over_sampling(
     data_new = pd.DataFrame(synth_matrix)
     
     ## synthetic data quality check
+    data_new = data_new.dropna()
     if sum(data_new.isnull().sum()) > 0:
         raise ValueError("oops! synthetic data contains missing values")
     
@@ -465,7 +466,7 @@ def over_sampling(
                 column = feat_const[j], 
                 value = np.repeat(
                     data_orig.iloc[0, feat_const[j]], 
-                    len(synth_matrix))
+                    len(data_new))
             )
     
     ## convert negative values to zero in non-negative features
