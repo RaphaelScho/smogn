@@ -1,9 +1,6 @@
 ## load dependencies - third party
 import numpy as np
 import pandas as pd
-from multiprocessing import Pool
-from multiprocessing import cpu_count
-from functools import partial
 
 ## load dependencies - internal
 from smogn.phi import phi
