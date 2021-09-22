@@ -442,9 +442,11 @@ def over_sampling(
     
     ## convert synthetic matrix to dataframe
     data_new = pd.DataFrame(synth_matrix)
-    
-    ## synthetic data quality check
+
+    # Bandaid fix for smogn seemingly randomly introducing missing values
+    # no longer needed once underlying issue is fixed (https://github.com/nickkunz/smogn/issues/17)
     data_new = data_new.dropna()
+    ## synthetic data quality check
     if sum(data_new.isnull().sum()) > 0:
         raise ValueError("oops! synthetic data contains missing values")
     
