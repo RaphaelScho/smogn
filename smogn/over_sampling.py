@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import random as rd
 from tqdm import tqdm
+from sklearn.metrics.pairwise import pairwise_distances
 
 ## load dependencies - internal
 from smogn.box_plot_stats import box_plot_stats
@@ -12,11 +13,14 @@ from smogn.dist_metrics import euclidean_dist, heom_dist, overlap_dist
 def over_sampling(
     
     ## arguments / inputs
-    data,       ## training set
-    index,      ## index of input data
-    perc,       ## over / under sampling
-    pert,       ## perturbation / noise percentage
-    k           ## num of neighs for over-sampling
+    data,               ## training set
+    index,              ## index of input data
+    perc,               ## over / under sampling
+    pert,               ## perturbation / noise percentage
+    k,                  ## num of neighs for over-sampling
+    parallel=False,     # parallel processing
+    n_jobs=-1,          # number of parallel jobs allowed (-1 means all cores)
+    silent=False        # # show progress outputs
     
     ):
     
@@ -159,45 +163,59 @@ def over_sampling(
     ## calculate distance between observations based on data types
     ## store results over null distance matrix of n x n
     dist_matrix = np.ndarray(shape = (n, n))
-    
-    for i in tqdm(range(n), ascii = True, desc = "dist_matrix"):
-        for j in range(n):
-            
-            ## utilize euclidean distance given that 
-            ## data is all numeric / continuous
-            if feat_count_nom == 0:
-                dist_matrix[i][j] = euclidean_dist(
-                    a = data_num.iloc[i],
-                    b = data_num.iloc[j],
-                    d = feat_count_num
-                )
-            
-            ## utilize heom distance given that 
-            ## data contains both numeric / continuous 
-            ## and nominal / categorical
-            if feat_count_nom > 0 and feat_count_num > 0:
-                dist_matrix[i][j] = heom_dist(
-                    
-                    ## numeric inputs
-                    a_num = data_num.iloc[i],
-                    b_num = data_num.iloc[j],
-                    d_num = feat_count_num,
-                    ranges_num = feat_ranges_num,
-                    
-                    ## nominal inputs
-                    a_nom = data_nom.iloc[i],
-                    b_nom = data_nom.iloc[j],
-                    d_nom = feat_count_nom
-                )
-            
-            ## utilize hamming distance given that 
-            ## data is all nominal / categorical
-            if feat_count_num == 0:
-                dist_matrix[i][j] = overlap_dist(
-                    a = data_nom.iloc[i],
-                    b = data_nom.iloc[j],
-                    d = feat_count_nom
-                )
+
+    if parallel:
+        # utilize euclidean distance given that data is all numeric / continuous
+        if feat_count_nom == 0:
+            dist_matrix = pairwise_distances(X=data_num, metric="euclidean", n_jobs=n_jobs)
+
+        # utilize heom distance given that ata contains both numeric / continuous and nominal / categorical
+        if feat_count_nom > 0 and feat_count_num > 0:
+            parallel = False  # TODO implement parallel processing for mixed types
+
+        # utilize hamming distance given that data is all nominal / categorical
+        if feat_count_num == 0:
+            dist_matrix = pairwise_distances(X=data_nom, metric="hamming", n_jobs=n_jobs)
+
+    if not parallel:
+        for i in tqdm(range(n), ascii = True, desc = "dist_matrix", disable=silent):
+            for j in range(n):
+
+                ## utilize euclidean distance given that
+                ## data is all numeric / continuous
+                if feat_count_nom == 0:
+                    dist_matrix[i][j] = euclidean_dist(
+                        a = data_num.iloc[i],
+                        b = data_num.iloc[j],
+                        d = feat_count_num
+                    )
+
+                ## utilize heom distance given that
+                ## data contains both numeric / continuous
+                ## and nominal / categorical
+                if feat_count_nom > 0 and feat_count_num > 0:
+                    dist_matrix[i][j] = heom_dist(
+
+                        ## numeric inputs
+                        a_num = data_num.iloc[i],
+                        b_num = data_num.iloc[j],
+                        d_num = feat_count_num,
+                        ranges_num = feat_ranges_num,
+
+                        ## nominal inputs
+                        a_nom = data_nom.iloc[i],
+                        b_nom = data_nom.iloc[j],
+                        d_nom = feat_count_nom
+                    )
+
+                ## utilize hamming distance given that
+                ## data is all nominal / categorical
+                if feat_count_num == 0:
+                    dist_matrix[i][j] = overlap_dist(
+                        a = data_nom.iloc[i],
+                        b = data_nom.iloc[j],
+                        d = feat_count_nom
+                    )
     
     ## determine indicies of k nearest neighbors
     ## and convert knn index list to matrix
@@ -233,7 +251,7 @@ def over_sampling(
     synth_matrix = np.ndarray(shape = ((x_synth * n + n_synth), d))
     
     if x_synth > 0:
-        for i in tqdm(range(n), ascii = True, desc = "synth_matrix"):
+        for i in tqdm(range(n), ascii = True, desc = "synth_matrix", disable=silent):
             
             ## determine which cases are 'safe' to interpolate
             safe_list = np.where(
@@ -332,7 +350,7 @@ def over_sampling(
     if n_synth > 0:
         count = 0
         
-        for i in tqdm(r_index, ascii = True, desc = "r_index"):
+        for i in tqdm(r_index, ascii = True, desc = "r_index", disable=silent):
             
             ## determine which cases are 'safe' to interpolate
             safe_list = np.where(
@@ -425,7 +443,10 @@ def over_sampling(
     
     ## convert synthetic matrix to dataframe
     data_new = pd.DataFrame(synth_matrix)
-    
+
+    # Bandaid fix for smogn seemingly randomly introducing missing values
+    # no longer needed once underlying issue is fixed (https://github.com/nickkunz/smogn/issues/17)
+    data_new = data_new.dropna()
     ## synthetic data quality check
     if sum(data_new.isnull().sum()) > 0:
         raise ValueError("oops! synthetic data contains missing values")
@@ -448,7 +469,7 @@ def over_sampling(
                 column = feat_const[j], 
                 value = np.repeat(
                     data_orig.iloc[0, feat_const[j]], 
-                    len(synth_matrix))
+                    len(data_new))
             )
     
     ## convert negative values to zero in non-negative features
