@@ -2,6 +2,17 @@
   <img src="https://github.com/nickkunz/smogn/blob/master/media/images/smogn_banner.png">
 </div>
 
+# NOTE: This fork adds parallel processing
+## Features
+1. This fork enables parallel processing of purely numerical or purely nominal data sets. To do so simply set the parameter `parallel=True` when calling smogn.smoter(). The code will fall back to the original implementation for mixed data sets.
+
+2. You can set the number of allowed parallel job with `n_jobs=X` (default -1 for all cores).
+
+3. Additionally, this fork patches the _ValueError "oops! synthetic data contains missing values"_ by dropping rows with missing values before returning.
+
+4. If you want to run SMOGN without spamming your console with prints, use the `silent=True` parameter.
+
+# ORIGINAL README BELOW
 
 ## Synthetic Minority Over-Sampling Technique for Regression with Gaussian Noise
 [![PyPI version](https://badge.fury.io/py/smogn.svg)](https://badge.fury.io/py/smogn)
