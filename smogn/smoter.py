@@ -21,6 +21,7 @@ def smoter(
     drop_na_row = True,       ## auto drop rows with nan's (bool)
     replace = False,          ## sampling replacement (bool)
     parallel=False,           # parallel processing
+    n_jobs=-1,                # number of parallel jobs allowed (-1 means all cores)
     silent=False,             # show progress outputs
     
     ## phi relevance function arguments / inputs
@@ -248,6 +249,7 @@ def smoter(
                 pert = pert,
                 k = k,
                 parallel=parallel,
+                n_jobs=n_jobs,
                 silent=silent
             )
 

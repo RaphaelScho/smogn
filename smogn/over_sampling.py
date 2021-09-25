@@ -19,6 +19,7 @@ def over_sampling(
     pert,               ## perturbation / noise percentage
     k,                  ## num of neighs for over-sampling
     parallel=False,     # parallel processing
+    n_jobs=-1,          # number of parallel jobs allowed (-1 means all cores)
     silent=False        # # show progress outputs
     
     ):
@@ -166,7 +167,7 @@ def over_sampling(
     if parallel:
         # utilize euclidean distance given that data is all numeric / continuous
         if feat_count_nom == 0:
-            dist_matrix = pairwise_distances(X=data_num, metric="euclidean", n_jobs=-1)
+            dist_matrix = pairwise_distances(X=data_num, metric="euclidean", n_jobs=n_jobs)
 
         # utilize heom distance given that ata contains both numeric / continuous and nominal / categorical
         if feat_count_nom > 0 and feat_count_num > 0:
@@ -174,7 +175,7 @@ def over_sampling(
 
         # utilize hamming distance given that data is all nominal / categorical
         if feat_count_num == 0:
-            dist_matrix = pairwise_distances(X=data_nom, metric="hamming", n_jobs=-1)
+            dist_matrix = pairwise_distances(X=data_nom, metric="hamming", n_jobs=n_jobs)
 
     if not parallel:
         for i in tqdm(range(n), ascii = True, desc = "dist_matrix", disable=silent):
